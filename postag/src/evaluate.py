@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
+
 import numpy as np
 import pandas as pd
-# import re
 import gensim
-# import nltk
 import keras
-# import matplotlib.pyplot as plt
+import pickle
 
 paths = {
     'train': '../macmorpho-v3/macmorpho-train.txt',
@@ -14,15 +13,19 @@ paths = {
     'word2vec': '../data/skip_s100.txt'
 }
 
+load_pickle=True
 
-# ## Embedding - Word2Vec
-w2v_model = gensim.models.KeyedVectors.load_word2vec_format(paths['word2vec'])
-vocab_size, embedding_size = w2v_model.vectors.shape
+if load_pickle:
+    w2v_model = pickle.load(open('word2vec_model_skipgram_100.p','rb'))
+else:
+    # ## Embedding - Word2Vec
+    w2v_model = gensim.models.KeyedVectors.load_word2vec_format(paths['word2vec'])
 
-# ### Adiciona vetores extras
-w2v_model.add(['<PAD>', '<OOV>'],
-              [[0.1] * embedding_size,
-              [0.2] * embedding_size])
+    vocab_size, embedding_size = w2v_model.vectors.shape
+    # ### Adiciona vetores extras
+    w2v_model.add(['<PAD>', '<OOV>'], [[0.1] * embedding_size,
+                  [0.2] * embedding_size])
+    pickle.dump(w2v_model, open('word2vec_model_skipgram_100.p','wb'))
 
 
 # ## Leitura do texto

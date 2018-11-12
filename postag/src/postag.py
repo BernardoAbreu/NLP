@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import gensim
 import keras
-
+import pickle
 
 paths = {
     'train': '../macmorpho-v3/macmorpho-train.txt',
@@ -18,14 +18,19 @@ paths = {
     'word2vec': '../data/skip_s100.txt'
 }
 
+load_pickle=True
 
-# ## Embedding - Word2Vec
-w2v_model = gensim.models.KeyedVectors.load_word2vec_format(paths['word2vec'])
+if load_pickle:
+    w2v_model = pickle.load(open('word2vec_model_skipgram_100.p','rb'))
+else:
+    # ## Embedding - Word2Vec
+    w2v_model = gensim.models.KeyedVectors.load_word2vec_format(paths['word2vec'])
 
-vocab_size, embedding_size = w2v_model.vectors.shape
-# ### Adiciona vetores extras
-w2v_model.add(['<PAD>', '<OOV>'], [[0.1] * embedding_size,
-              [0.2] * embedding_size])
+    vocab_size, embedding_size = w2v_model.vectors.shape
+    # ### Adiciona vetores extras
+    w2v_model.add(['<PAD>', '<OOV>'], [[0.1] * embedding_size,
+                  [0.2] * embedding_size])
+    pickle.dump(w2v_model, open('word2vec_model_skipgram_100.p','wb'))
 
 
 # ## Leitura do texto
@@ -218,13 +223,13 @@ model.summary()
 
 
 csv_logger = keras.callbacks.CSVLogger('training.log')
-early_stop = keras.callbacks.EarlyStop(monitor='val_loss',
-                                       min_delta='0.0001',
-                                       patience=4,
-                                       verbose=1,
-                                       mode='min')
+early_stop = keras.callbacks.EarlyStopping(monitor='val_loss',
+                                           min_delta=0.001,
+                                           patience=4,
+                                           verbose=1,
+                                           mode='min')
 
-model.fit(train_sentences_X, cat_train_tags_y, batch_size=64, epochs=5,
+model.fit(train_sentences_X, cat_train_tags_y, batch_size=64, epochs=1,
           validation_data=(dev_sentences_X, cat_dev_tags_y),
           callbacks=[csv_logger, early_stop])
 
@@ -238,6 +243,9 @@ print("Train model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
 scores = model.evaluate(dev_sentences_X, cat_dev_tags_y)
 print("Dev model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
 
+ww = model.get_weights()
+print(ww)
+
 # ## Save model
 
 # ### serialize model to JSON
@@ -248,3 +256,18 @@ print("Dev model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
 # ### serialize weights to HDF5
 model.save_weights("model.h5")
 print("Saved model to disk")
+model.load_weights("model.h5")
+
+
+scores = model.evaluate(test_sentences_X, cat_test_tags_y)
+print("Test model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+
+scores = model.evaluate(train_sentences_X, cat_train_tags_y)
+print("Train model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+
+scores = model.evaluate(dev_sentences_X, cat_dev_tags_y)
+print("Dev model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+ww2 = model.get_weights()
+print(ww2)
+
+print(np.array_equal(ww,ww2))
