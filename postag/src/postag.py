@@ -5,19 +5,10 @@
 # ## Processamento de Linguagem Natural - 2018/2
 # ### Bernardo de Almeida Abreu - 2018718155
 
-# In[57]:
-
-
 import numpy as np
 import pandas as pd
-# import re
 import gensim
-# import nltk
 import keras
-# import matplotlib.pyplot as plt
-from keras.models import model_from_json
-
-# In[2]:
 
 
 paths = {
@@ -31,8 +22,10 @@ paths = {
 # ## Embedding - Word2Vec
 w2v_model = gensim.models.KeyedVectors.load_word2vec_format(paths['word2vec'])
 
+vocab_size, embedding_size = w2v_model.vectors.shape
 # ### Adiciona vetores extras
-w2v_model.add(['<PAD>','<OOV>'], [[0.1]*100,[0.2]*100])
+w2v_model.add(['<PAD>', '<OOV>'], [[0.1] * embedding_size,
+              [0.2] * embedding_size])
 
 
 # ## Leitura do texto
@@ -69,7 +62,10 @@ dev_words, dev_tags = split_word_tags(dev_text)
 def flat_list(l):
     return [item for sublist in l for item in sublist]
 
-id2tag = ['<PAD>'] + list(set(flat_list(train_tags)).union(set(flat_list(test_tags))).union(set(flat_list(dev_tags))))
+
+id2tag = ['<PAD>'] + list(set(flat_list(train_tags))
+                          .union(set(flat_list(test_tags)))
+                          .union(set(flat_list(dev_tags))))
 tag2id = {}
 for i, tag in enumerate(id2tag):
     tag2id[tag] = i
@@ -120,7 +116,7 @@ print(len(df_train['words']))
 
 
 pretrained_weights = w2v_model.vectors
-vocab_size, emdedding_size = pretrained_weights.shape
+vocab_size, embedding_size = pretrained_weights.shape
 print('Result embedding shape:', pretrained_weights.shape)
 
 
@@ -201,7 +197,7 @@ model = keras.models.Sequential()
 model.add(
     keras.layers.Embedding(
         input_dim=len(w2v_model.vocab),
-        output_dim=emdedding_size,
+        output_dim=embedding_size,
         input_length=MAX_SENTENCE_LENGTH,
         weights=[pretrained_weights]
     )
@@ -209,35 +205,45 @@ model.add(
 
 
 model.add(
-    keras.layers.Bidirectional(keras.layers.LSTM(256, return_sequences=True)))
+    keras.layers.Bidirectional(keras.layers.LSTM(128, return_sequences=True)))
 model.add(keras.layers.Dropout(0.2))
 model.add(keras.layers.TimeDistributed(keras.layers.Dense(len(tag2id))))
-model.add(keras.layers.Dropout(0.2))
 model.add(keras.layers.Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy',
-              optimizer=keras.optimizers.Adam(0.001),
+              optimizer="adam",
               metrics=['accuracy'])
 
 model.summary()
 
 
 csv_logger = keras.callbacks.CSVLogger('training.log')
-model.fit(train_sentences_X, cat_train_tags_y, batch_size=64, epochs=10,
-          # validation_split=0.2,
+early_stop = keras.callbacks.EarlyStop(monitor='val_loss',
+                                       min_delta='0.0001',
+                                       patience=4,
+                                       verbose=1,
+                                       mode='min')
+
+model.fit(train_sentences_X, cat_train_tags_y, batch_size=64, epochs=5,
           validation_data=(dev_sentences_X, cat_dev_tags_y),
-          callbacks=[csv_logger])
+          callbacks=[csv_logger, early_stop])
 
 print('Evaluate model:')
 scores = model.evaluate(test_sentences_X, cat_test_tags_y)
-print("%s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+print("Test model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+
+scores = model.evaluate(train_sentences_X, cat_train_tags_y)
+print("Train model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+
+scores = model.evaluate(dev_sentences_X, cat_dev_tags_y)
+print("Dev model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
 
 # ## Save model
 
 # ### serialize model to JSON
-model_json = model.to_json()
-with open("model.json", "w") as json_file:
-    json_file.write(model_json)
+# model_json = model.to_json()
+# with open("model.json", "w") as json_file:
+#     json_file.write(model_json)
 
 # ### serialize weights to HDF5
 model.save_weights("model.h5")

@@ -6,10 +6,6 @@ import gensim
 # import nltk
 import keras
 # import matplotlib.pyplot as plt
-from keras.models import model_from_json
-
-
-# In[2]:
 
 paths = {
     'train': '../macmorpho-v3/macmorpho-train.txt',
@@ -184,25 +180,42 @@ cat_dev_tags_y = keras.utils.to_categorical(dev_tags_y,
                                             num_classes=len(id2tag),
                                             dtype='int32')
 
-# load json and create model
-json_file = open('model.json', 'r')
-loaded_model_json = json_file.read()
-json_file.close()
-loaded_model = model_from_json(loaded_model_json)
+
+model = keras.models.Sequential()
+
+# ### Adiciona camada de embedding
+model.add(
+    keras.layers.Embedding(
+        input_dim=len(w2v_model.vocab),
+        output_dim=embedding_size,
+        input_length=MAX_SENTENCE_LENGTH,
+        weights=[pretrained_weights]
+    )
+)
+
+
+model.add(
+    keras.layers.Bidirectional(keras.layers.LSTM(128, return_sequences=True)))
+model.add(keras.layers.Dropout(0.2))
+model.add(keras.layers.TimeDistributed(keras.layers.Dense(len(tag2id))))
+model.add(keras.layers.Activation('softmax'))
+
 # load weights into new model
-loaded_model.load_weights("model.h5")
+# model.load_weights("model.h5")
 print("Loaded model from disk")
 
-loaded_model.compile(loss='categorical_crossentropy',
-                     optimizer=keras.optimizers.Adam(0.001),
-                     metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy',
+              optimizer="adam",
+              metrics=['accuracy'])
 
-score = loaded_model.evaluate(test_sentences_X, cat_test_tags_y, verbose=0)
-print(loaded_model.metrics_names)
-print(score)
+model.summary()
 
-score = loaded_model.evaluate(dev_sentences_X, cat_dev_tags_y, verbose=0)
-print(score)
 
-score = loaded_model.evaluate(train_sentences_X, cat_train_tags_y, verbose=0)
-print(score)
+scores = model.evaluate(test_sentences_X, cat_test_tags_y)
+print("Test model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+
+scores = model.evaluate(train_sentences_X, cat_train_tags_y)
+print("Train model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+
+scores = model.evaluate(dev_sentences_X, cat_dev_tags_y)
+print("Dev model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
