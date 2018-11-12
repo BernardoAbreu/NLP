@@ -15,7 +15,7 @@ paths = {
     'train': '../macmorpho-v3/macmorpho-train.txt',
     'test': '../macmorpho-v3/macmorpho-test.txt',
     'dev': '../macmorpho-v3/macmorpho-dev.txt',
-    'word2vec': '../data/skip_s50.txt'
+    'word2vec': '../data/skip_s100.txt'
 }
 
 
@@ -96,8 +96,14 @@ def fill_sentence(sentence):
     return sentence[:MAX_SENTENCE_LENGTH]
 
 
+df_train["words"] = df_train["words"].map(fill_sentence)
+df_train["tags"] = df_train["tags"].map(fill_sentence)
+
 df_test["words"] = df_test["words"].map(fill_sentence)
 df_test["tags"] = df_test["tags"].map(fill_sentence)
+
+df_dev["words"] = df_dev["words"].map(fill_sentence)
+df_dev["tags"] = df_dev["tags"].map(fill_sentence)
 
 print(len(w2v_model.vocab))
 print(MAX_SENTENCE_LENGTH)
@@ -142,19 +148,41 @@ def prepare_tags(tag_sentences, tag2index):
     return tags_y
 
 
+print('\nPreparing the train data for LSTM...')
+train_sentences_X = prepare_words(df_train['words'])
+print('train_x shape:', train_sentences_X.shape)
+
 print('\nPreparing the test data for LSTM...')
 test_sentences_X = prepare_words(df_test['words'])
-print('test_x shape:', test_sentences_X.shape)
+print('train_x shape:', test_sentences_X.shape)
+
+print('\nPreparing the validation data for LSTM...')
+dev_sentences_X = prepare_words(df_dev['words'])
+print('train_x shape:', dev_sentences_X.shape)
+
+
+print('\nPreparing the train tags for LSTM...')
+train_tags_y = prepare_tags(df_train['tags'], tag2id)
+print('train_y shape:', train_tags_y.shape)
 
 print('\nPreparing the test data for LSTM...')
 test_tags_y = prepare_tags(df_test['tags'], tag2id)
-print('test_y shape:', test_tags_y.shape)
+print('train_y shape:', test_tags_y.shape)
 
+print('\nPreparing the validation data for LSTM...')
+dev_tags_y = prepare_tags(df_dev['tags'], tag2id)
+print('train_y shape:', dev_tags_y.shape)
 print()
 
+cat_train_tags_y = keras.utils.to_categorical(train_tags_y,
+                                              num_classes=len(id2tag),
+                                              dtype='int32')
 cat_test_tags_y = keras.utils.to_categorical(test_tags_y,
                                              num_classes=len(id2tag),
                                              dtype='int32')
+cat_dev_tags_y = keras.utils.to_categorical(dev_tags_y,
+                                            num_classes=len(id2tag),
+                                            dtype='int32')
 
 # load json and create model
 json_file = open('model.json', 'r')
@@ -170,4 +198,11 @@ loaded_model.compile(loss='categorical_crossentropy',
                      metrics=['accuracy'])
 
 score = loaded_model.evaluate(test_sentences_X, cat_test_tags_y, verbose=0)
-print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
+print(loaded_model.metrics_names)
+print(score)
+
+score = loaded_model.evaluate(dev_sentences_X, cat_dev_tags_y, verbose=0)
+print(score)
+
+score = loaded_model.evaluate(train_sentences_X, cat_train_tags_y, verbose=0)
+print(score)

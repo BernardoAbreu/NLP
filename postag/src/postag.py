@@ -3,7 +3,6 @@
 
 # # Trabalho Prático 2
 # ## Processamento de Linguagem Natural - 2018/2
-# 
 # ### Bernardo de Almeida Abreu - 2018718155
 
 # In[57]:
@@ -17,7 +16,6 @@ import gensim
 import keras
 # import matplotlib.pyplot as plt
 from keras.models import model_from_json
-
 
 # In[2]:
 
@@ -47,15 +45,18 @@ train_text = read_text(paths['train'])
 test_text = read_text(paths['test'])
 dev_text = read_text(paths['dev'])
 
+
 # ### Separação de palavras e tags
 def split_word_tags(text):
     word_lines = []
     tag_lines = []
     for line in text:
-        words, tags = zip(*[tagged_word.split('_') for tagged_word in line.split()])
+        words, tags = zip(*[tagged_word.split('_')
+                            for tagged_word in line.split()])
         word_lines.append([w.lower() for w in words])
         tag_lines.append(list(tags))
     return word_lines, tag_lines
+
 
 train_words, train_tags = split_word_tags(train_text)
 print(train_words[0])
@@ -97,7 +98,7 @@ MAX_SENTENCE_LENGTH = int(df_sentences['words'].map(len).describe()['75%'])
 
 def fill_sentence(sentence):
     tokens_to_fill = int(MAX_SENTENCE_LENGTH - len(sentence))
-    sentence.extend(['<PAD>']*tokens_to_fill)
+    sentence.extend(['<PAD>'] * tokens_to_fill)
     return sentence[:MAX_SENTENCE_LENGTH]
 
 
@@ -111,7 +112,6 @@ df_dev["words"] = df_dev["words"].map(fill_sentence)
 df_dev["tags"] = df_dev["tags"].map(fill_sentence)
 
 
-
 print(len(w2v_model.vocab))
 print(MAX_SENTENCE_LENGTH)
 print(len(df_train))
@@ -123,15 +123,18 @@ pretrained_weights = w2v_model.vectors
 vocab_size, emdedding_size = pretrained_weights.shape
 print('Result embedding shape:', pretrained_weights.shape)
 
+
 def word2idx(word):
     return w2v_model.vocab[word].index
+
 
 def idx2word(idx):
     return w2v_model.index2word[idx]
 
 
 def prepare_words(sentences):
-    sentences_x = np.zeros([len(sentences), MAX_SENTENCE_LENGTH], dtype=np.int32)
+    sentences_x = np.zeros([len(sentences), MAX_SENTENCE_LENGTH],
+                           dtype=np.int32)
 
     oov_index = word2idx('<OOV>')
     for i, sentence in enumerate(sentences):
@@ -142,12 +145,15 @@ def prepare_words(sentences):
                 sentences_x[i, t] = oov_index
     return sentences_x
 
+
 def prepare_tags(tag_sentences, tag2index):
-    tags_y = np.zeros([len(tag_sentences), MAX_SENTENCE_LENGTH], dtype=np.int32)
+    tags_y = np.zeros([len(tag_sentences), MAX_SENTENCE_LENGTH],
+                      dtype=np.int32)
     for i, sentence in enumerate(tag_sentences):
         for t, tag in enumerate(sentence):
             tags_y[i, t] = tag2index[tag]
     return tags_y
+
 
 print('\nPreparing the train data for LSTM...')
 train_sentences_X = prepare_words(df_train['words'])
@@ -176,9 +182,15 @@ print('train_y shape:', dev_tags_y.shape)
 
 print()
 
-cat_train_tags_y = keras.utils.to_categorical(train_tags_y, num_classes=len(id2tag), dtype='int32')
-cat_test_tags_y = keras.utils.to_categorical(test_tags_y, num_classes=len(id2tag), dtype='int32')
-cat_dev_tags_y = keras.utils.to_categorical(dev_tags_y, num_classes=len(id2tag), dtype='int32')
+cat_train_tags_y = keras.utils.to_categorical(train_tags_y,
+                                              num_classes=len(id2tag),
+                                              dtype='int32')
+cat_test_tags_y = keras.utils.to_categorical(test_tags_y,
+                                             num_classes=len(id2tag),
+                                             dtype='int32')
+cat_dev_tags_y = keras.utils.to_categorical(dev_tags_y,
+                                            num_classes=len(id2tag),
+                                            dtype='int32')
 
 
 # ## Arquitetura do modelo
@@ -196,24 +208,29 @@ model.add(
 )
 
 
-model.add(keras.layers.Bidirectional(keras.layers.LSTM(256, return_sequences=True)))
+model.add(
+    keras.layers.Bidirectional(keras.layers.LSTM(256, return_sequences=True)))
+model.add(keras.layers.Dropout(0.2))
 model.add(keras.layers.TimeDistributed(keras.layers.Dense(len(tag2id))))
+model.add(keras.layers.Dropout(0.2))
 model.add(keras.layers.Activation('softmax'))
- 
+
 model.compile(loss='categorical_crossentropy',
               optimizer=keras.optimizers.Adam(0.001),
               metrics=['accuracy'])
- 
+
 model.summary()
 
 
 csv_logger = keras.callbacks.CSVLogger('training.log')
-model.fit(train_sentences_X, cat_train_tags_y, batch_size=64, epochs=40,
-          validation_data=(dev_sentences_X,cat_dev_tags_y),
+model.fit(train_sentences_X, cat_train_tags_y, batch_size=64, epochs=10,
+          # validation_split=0.2,
+          validation_data=(dev_sentences_X, cat_dev_tags_y),
           callbacks=[csv_logger])
 
+print('Evaluate model:')
 scores = model.evaluate(test_sentences_X, cat_test_tags_y)
-print(f"{model.metrics_names[1]}: {scores[1] * 100}")   # acc: 99.09751977804825
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
 
 # ## Save model
 
@@ -225,4 +242,3 @@ with open("model.json", "w") as json_file:
 # ### serialize weights to HDF5
 model.save_weights("model.h5")
 print("Saved model to disk")
-
