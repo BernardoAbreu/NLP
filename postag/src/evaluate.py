@@ -201,7 +201,7 @@ model.add(keras.layers.TimeDistributed(keras.layers.Dense(len(tag2id))))
 model.add(keras.layers.Activation('softmax'))
 
 # load weights into new model
-# model.load_weights("model.h5")
+model.load_weights("model.h5")
 print("Loaded model from disk")
 
 model.compile(loss='categorical_crossentropy',
