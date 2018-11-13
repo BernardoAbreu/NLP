@@ -22,24 +22,6 @@ def main():
     cat_test_tags_y = keras.utils.to_categorical(test_tags_y)
     cat_dev_tags_y = keras.utils.to_categorical(dev_tags_y)
 
-    # ## Arquitetura do modelo
-    # loaded_model = create_architecture(w2v_model,
-    #                                    max_sentence_len, len(tag2id))
-    # # load weights into new model
-    # loaded_model.load_weights("model_weights.h5")
-    # print("Loaded model from disk")
-    # loaded_model.compile(loss='categorical_crossentropy',
-    #                      optimizer="adam",
-    #                      metrics=['accuracy'])
-    # with open("model.json", "r") as f:
-    #     json_str = f.read()
-    # loaded_model = keras.models.model_from_json(json_str)
-    # manual_variable_initialization(True)
-    # loaded_model.load_weights("model_weights.hdf5")
-    # loaded_model.compile(loss='categorical_crossentropy',
-    #               optimizer="adam",
-    #               metrics=['accuracy'])
-
     model = keras.models.load_model('keras_model.hdf5')
     saver = tf.train.Saver()
     sess = keras.backend.get_session()

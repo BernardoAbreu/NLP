@@ -8,7 +8,6 @@
 import pandas as pd
 import tensorflow as tf
 import keras
-import pickle
 from utils import *
 
 
@@ -99,7 +98,7 @@ def main():
                                                verbose=1,
                                                mode='min')
     model.fit(train_sentences_X, cat_train_tags_y,
-              batch_size=64, epochs=1,
+              batch_size=64, epochs=5,
               validation_data=(dev_sentences_X, cat_dev_tags_y),
               callbacks=[csv_logger, early_stop])
 
@@ -111,17 +110,6 @@ def main():
                  train_sentences_X, cat_train_tags_y,
                  test_sentences_X, cat_test_tags_y,
                  dev_sentences_X, cat_dev_tags_y)
-
-    # ## Save model
-    # ### serialize weights to HDF5
-    # model.save_weights("model_weights.hdf5", overwrite=True)
-    # print("Saved model to disk")
-    # # Architecture
-    # with open("model.json", "w") as f:
-    #     f.write(model.to_json())
-    # w = model.get_weights()
-    # print(w.shape)
-    # np.savetxt('weights.csv', w, fmt='%s')
 
 
 if __name__ == '__main__':
