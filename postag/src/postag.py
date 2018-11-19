@@ -11,6 +11,14 @@ import keras
 from utils import *
 
 
+PATHS = {
+    'train': '../macmorpho-v3/macmorpho-train.txt',
+    'test': '../macmorpho-v3/macmorpho-test.txt',
+    'dev': '../macmorpho-v3/macmorpho-dev.txt',
+    'word2vec': '../data/skip_s100.txt'
+}
+
+
 def main():
     train_text = read_text(PATHS['train'])
     test_text = read_text(PATHS['test'])
@@ -43,7 +51,9 @@ def main():
     df_sentences = pd.concat([df_train, df_test, df_dev], axis=0)
     max_sentence_len = int(df_sentences['words'].map(len).describe()['75%'])
 
-    f_lambda = lambda x: fill_sentence(x, max_sentence_len)
+    def f_lambda(x):
+        return fill_sentence(x, max_sentence_len)
+
     df_train["words"] = df_train["words"].map(f_lambda)
     df_train["tags"] = df_train["tags"].map(f_lambda)
 
@@ -53,7 +63,7 @@ def main():
     df_dev["words"] = df_dev["words"].map(f_lambda)
     df_dev["tags"] = df_dev["tags"].map(f_lambda)
 
-    w2v_model = load_embedding(True)
+    w2v_model = load_embedding(PATHS['word2vec'], True)
 
     print('\nPreparing the train data for LSTM...')
     train_sentences_X, train_tags_y = prepare_data(df_train, w2v_model,

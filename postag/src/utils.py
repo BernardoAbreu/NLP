@@ -5,20 +5,12 @@ import pickle
 import keras
 
 
-PATHS = {
-    'train': '../macmorpho-v3/macmorpho-train.txt',
-    'test': '../macmorpho-v3/macmorpho-test.txt',
-    'dev': '../macmorpho-v3/macmorpho-dev.txt',
-    'word2vec': '../data/skip_s100.txt'
-}
-
-
-def load_embedding(load_pickle):
+def load_embedding(path, load_pickle=False):
     if load_pickle:
         m = pickle.load(open('word2vec_model_skipgram_100.p', 'rb'))
     else:
-        m = gensim.models.KeyedVectors.load_word2vec_format(PATHS['word2vec'])
-        _, embed_size = m.vectors.shape
+        m = gensim.models.KeyedVectors.load_word2vec_format(path)
+        embed_size = m.vectors.shape[1]
         # ### Adiciona vetores extras
         m.add(['<PAD>', '<OOV>'], [[0.1] * embed_size, [0.2] * embed_size])
         pickle.dump(m, open('word2vec_model_skipgram_100.p', 'wb'))
