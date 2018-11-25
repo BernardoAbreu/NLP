@@ -28,9 +28,9 @@ def main():
     test_words, test_tags = split_word_tags(test_text)
     dev_words, dev_tags = split_word_tags(dev_text)
 
-    id2tag = ['<PAD>'] + list(set(flat_list(train_tags))
-                              .union(set(flat_list(test_tags)))
-                              .union(set(flat_list(dev_tags))))
+    id2tag = ['<PAD>'] + sorted(list(set(flat_list(train_tags))
+                                .union(set(flat_list(test_tags)))
+                                .union(set(flat_list(dev_tags)))))
     tag2id = {tag: i for i, tag in enumerate(id2tag)}
 
     # ## Pad the words
@@ -77,12 +77,12 @@ def main():
     dev_sentences_X, dev_tags_y = prepare_data(df_dev, w2v_model,
                                                tag2id, max_sentence_len)
 
-    np.savetxt('train_x', train_sentences_X)
-    np.savetxt('test_x', test_sentences_X)
-    np.savetxt('dev_x', dev_sentences_X)
-    np.savetxt('train_y', train_tags_y)
-    np.savetxt('test_y', test_tags_y)
-    np.savetxt('dev_y', dev_tags_y)
+    np.savetxt('train_x', train_sentences_X, fmt='%s')
+    np.savetxt('test_x', test_sentences_X, fmt='%s')
+    np.savetxt('dev_x', dev_sentences_X, fmt='%s')
+    np.savetxt('train_y', train_tags_y, fmt='%s')
+    np.savetxt('test_y', test_tags_y, fmt='%s')
+    np.savetxt('dev_y', dev_tags_y, fmt='%s')
     print()
 
     cat_train_tags_y = keras.utils.to_categorical(train_tags_y,
@@ -97,7 +97,7 @@ def main():
     model = create_architecture(w2v_model, max_sentence_len, len(tag2id))
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam",
-                  metrics=['accuracy'])
+                  metrics=['accuracy', ignore_class_accuracy(tag2id['<PAD>'])])
 
     model.summary()
 

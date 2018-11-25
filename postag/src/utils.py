@@ -72,7 +72,7 @@ def prepare_tags(tag_sentences, tag2index, max_sentence_length):
     return tags_y
 
 
-def create_architecture(w2v_model, input_len, output_len):
+def create_architecture(w2v_model, input_len, output_len, lstm_size=256):
     model = keras.models.Sequential()
 
     vocab_size, embedding_size = w2v_model.vectors.shape
@@ -88,7 +88,7 @@ def create_architecture(w2v_model, input_len, output_len):
 
     model.add(
         keras.layers.Bidirectional(
-            keras.layers.LSTM(128, return_sequences=True)
+            keras.layers.LSTM(lstm_size, return_sequences=True)
         )
     )
 
@@ -106,16 +106,47 @@ def create_architecture(w2v_model, input_len, output_len):
 def evaluate_all(model, train_X, train_Y, test_X, test_Y, dev_X, dev_Y):
     print('Evaluating model:')
     scores = model.evaluate(test_X, test_Y)
-    print("Test model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+    for metric, score in zip(model.metrics_names, scores):
+        print(f"Test model {metric}: {score*100}")
 
     scores = model.evaluate(train_X, train_Y)
-    print("Train model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+    for metric, score in zip(model.metrics_names, scores):
+        print(f"Train model {metric}: {score*100}")
 
     scores = model.evaluate(dev_X, dev_Y)
-    print("Dev model %s: %.2f%%" % (model.metrics_names[1], scores[1] * 100))
+    for metric, score in zip(model.metrics_names, scores):
+        print(f"Dev model {metric}: {score*100}")
 
 
 def prepare_data(df, w2v_model, tag2id, max_sentence_len):
     x_data = prepare_words(df['words'], w2v_model, max_sentence_len)
     y_data = prepare_tags(df['tags'], tag2id, max_sentence_len)
     return x_data, y_data
+
+
+def ignore_accuracy(y_true, y_pred):
+    y_true_class = keras.backend.argmax(y_true, axis=-1)
+    y_pred_class = keras.backend.argmax(y_pred, axis=-1)
+    ignore_mask = keras.backend.cast(
+        keras.backend.not_equal(y_pred_class, 0), 'int32')
+    matches = keras.backend.cast(
+        keras.backend.equal(y_true_class, y_pred_class), 'int32') * \
+        ignore_mask
+    accuracy = keras.backend.sum(matches) / \
+        keras.backend.maximum(keras.backend.sum(ignore_mask), 1)
+    return accuracy
+
+
+def ignore_class_accuracy(to_ignore=0):
+    def ignore_accuracy(y_true, y_pred):
+        y_true_class = keras.backend.argmax(y_true, axis=-1)
+        y_pred_class = keras.backend.argmax(y_pred, axis=-1)
+        ignore_mask = keras.backend.cast(
+            keras.backend.not_equal(y_pred_class, to_ignore), 'int32')
+        matches = keras.backend.cast(
+            keras.backend.equal(y_true_class, y_pred_class), 'int32') * \
+            ignore_mask
+        accuracy = keras.backend.sum(matches) / \
+            keras.backend.maximum(keras.backend.sum(ignore_mask), 1)
+        return accuracy
+    return ignore_accuracy
