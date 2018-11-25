@@ -15,11 +15,11 @@ from sklearn.metrics import classification_report
 
 def main():
     train_sentences_X = np.loadtxt('train_x')
-    train_tags_y = np.loadtxt('train_y').astype(int)
+    train_tags_y = np.loadtxt('train_y')
     test_sentences_X = np.loadtxt('test_x')
-    test_tags_y = np.loadtxt('test_y').astype(int)
+    test_tags_y = np.loadtxt('test_y')
     dev_sentences_X = np.loadtxt('dev_x')
-    dev_tags_y = np.loadtxt('dev_y').astype(int)
+    dev_tags_y = np.loadtxt('dev_y')
     cat_train_tags_y = keras.utils.to_categorical(train_tags_y)
     cat_test_tags_y = keras.utils.to_categorical(test_tags_y)
     cat_dev_tags_y = keras.utils.to_categorical(dev_tags_y)
@@ -43,11 +43,11 @@ def main():
                delimiter=',')
 
     test_pred = model.predict_classes(test_sentences_X)
-    np.savetxt('test_predict.txt', y_pred, dtype=int)
+    np.savetxt('test_predict.txt', test_pred, fmt='%s')
     train_pred = model.predict_classes(train_sentences_X)
-    np.savetxt('train_predict.txt', y_pred, dtype=int)
+    np.savetxt('train_predict.txt', train_pred, fmt='%s')
     dev_pred = model.predict_classes(dev_sentences_X)
-    np.savetxt('dev_predict.txt', y_pred, dtype=int)
+    np.savetxt('dev_predict.txt', dev_pred, fmt='%s')
     # for x in test_sentences_X:
     #     # if x.shape != (25,):
     #     print(x.shape)
